@@ -17,7 +17,7 @@ A lightweight architecture decision record (ADR) and changelog for focused teams
 ## Tech stack
 
 - Next.js (App Router), React 19, TypeScript
-- Prisma ORM with SQLite (file database)
+- Prisma ORM with SQLite (file database locally, Turso/libSQL in production)
 - Auth.js (NextAuth v5) with email/password credentials
 - Tailwind CSS v4 and shadcn/ui
 
@@ -36,7 +36,8 @@ Open http://localhost:3000 and sign in with the seeded demo account (demo@ratiol
 
 ## Environment variables
 
-- `DATABASE_URL` — SQLite connection string (default: `file:./dev.db`)
+- `DATABASE_URL` — SQLite file for local development (default: `file:./dev.db`) or a Turso `libsql://` URL for production
+- `TURSO_AUTH_TOKEN` — Turso database auth token (production)
 - `AUTH_SECRET` — Auth.js signing secret (required)
 - `AUTH_TRUST_HOST` — set to `true` for local development
 - `SEED_EMAIL` / `SEED_PASSWORD` — credentials for the seeded demo user
@@ -50,6 +51,7 @@ Open http://localhost:3000 and sign in with the seeded demo account (demo@ratiol
 - `npm run lint` — run ESLint
 - `prisma generate` — regenerates the Prisma client (runs automatically on install)
 
-## Deployment notes
+## Deployment
 
-The app uses a local SQLite file, so it needs a host with a persistent volume (for example a VPS or Docker). It is not compatible with serverless platforms like Vercel as-is; for those, migrate the datasource to PostgreSQL first.
+- **Local development** uses a SQLite file via the `better-sqlite3` driver adapter (`DATABASE_URL` starting with `file:`).
+- **Production** runs on Vercel with a Turso/libSQL database. Set `DATABASE_URL` to the Turso `libsql://` URL, `TURSO_AUTH_TOKEN` to the database auth token, and a real `AUTH_SECRET`. The driver adapter is chosen automatically from the URL scheme.
