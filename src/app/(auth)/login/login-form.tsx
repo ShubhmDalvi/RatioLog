@@ -66,12 +66,6 @@ export function LoginForm() {
       >
         {pending ? "Signing In…" : "Sign In"}
       </Button>
-
-      <p className="border-t border-white/[0.08] pt-4 text-center text-xs text-zinc-400">
-        Demo account:{" "}
-        <span className="font-mono">demo@ratiolog.dev</span> ·{" "}
-        <span className="font-mono">password123</span>
-      </p>
     </form>
   );
 }
