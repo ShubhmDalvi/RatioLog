@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import path from "node:path";
 
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -19,7 +20,20 @@ function resolveDatabaseUrl(): string {
   return `file:${path.resolve(process.cwd(), filePath)}`;
 }
 
-const adapter = new PrismaBetterSqlite3({ url: resolveDatabaseUrl() });
+function createAdapter(): PrismaBetterSqlite3 | PrismaLibSql {
+  const url = resolveDatabaseUrl();
+
+  if (url.startsWith("file:")) {
+    return new PrismaBetterSqlite3({ url });
+  }
+
+  return new PrismaLibSql({
+    url,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+}
+
+const adapter = createAdapter();
 const prisma = new PrismaClient({ adapter });
 
 type SeedDecision = {
