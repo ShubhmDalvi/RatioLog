@@ -1,3 +1,8 @@
+
+<p align="center">
+  <img src="public/logo.svg" alt="Logo" width="100">
+</p>
+
 # RatioLog
 
 A lightweight architecture decision record (ADR) and changelog for focused teams. Capture decisions with context and rationale, link superseded decisions, and keep a running record of what changed.
