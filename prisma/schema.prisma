@@ -1,0 +1,113 @@
+// RatioLog — Prisma schema
+// SQLite for local development, PostgreSQL-compatible for production deployment.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum DecisionStatus {
+  PROPOSED
+  ACCEPTED
+  DEPRECATED
+  SUPERSEDED
+  REJECTED
+}
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String?
+  passwordHash     String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  decisions        Decision[]
+  pinnedDecisions  PinnedDecision[]
+  changelogEntries ChangelogEntry[]
+}
+
+model Decision {
+  id            String         @id @default(cuid())
+  title         String
+  status        DecisionStatus @default(PROPOSED)
+  date          DateTime       @default(now())
+  isPrivate     Boolean        @default(false)
+  context       String         @default("")
+  decision      String         @default("")
+  consequences  String         @default("")
+  // Tags are stored as a JSON array string so the schema stays portable between
+  // SQLite (no scalar lists) and PostgreSQL (can migrate to text[]).
+  tags          String         @default("[]")
+  createdById   String
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Self-relation for "supersedes" / "superseded by" links.
+  supersededById String?  @unique
+  supersededBy   Decision? @relation("DecisionSupersedes", fields: [supersededById], references: [id])
+  supersedes     Decision? @relation("DecisionSupersedes")
+
+  pinnedBy        PinnedDecision[]
+  changelogEntries ChangelogEntry[]
+
+  @@index([status])
+  @@index([date])
+  @@index([createdById])
+}
+
+model PinnedDecision {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  decisionId String
+  decision   Decision @relation(fields: [decisionId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, decisionId])
+  @@index([userId])
+}
+
+enum ChangelogEntryType {
+  ADDED
+  CHANGED
+  FIXED
+  DEPRECATED
+  REMOVED
+}
+
+enum ChangelogEntrySource {
+  MANUAL
+  DECISION_PUBLISHED
+  DECISION_STATUS_CHANGED
+  DECISION_EDITED
+  DECISION_REMOVED
+}
+
+model ChangelogEntry {
+  id          String              @id @default(cuid())
+  title       String
+  description String              @default("")
+  type        ChangelogEntryType  @default(CHANGED)
+  // Optional free-text area the change touches (e.g. "API", "Auth").
+  scope       String              @default("")
+  // Where this entry came from: hand-written or generated from a decision event.
+  source      ChangelogEntrySource @default(MANUAL)
+  date        DateTime            @default(now())
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  createdById String
+  createdBy   User                @relation(fields: [createdById], references: [id])
+  // Optional link back to the decision this entry describes. Kept when the
+  // decision is deleted (entries stay readable, just unlinked).
+  decisionId  String?
+  decision    Decision?           @relation(fields: [decisionId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([createdById])
+  @@index([decisionId])
+}
