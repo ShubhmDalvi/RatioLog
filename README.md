@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RatioLog
 
-## Getting Started
+A lightweight architecture decision record (ADR) and changelog for focused teams. Capture decisions with context and rationale, link superseded decisions, and keep a running record of what changed.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Architecture decision records with Context, Decision, and Consequences sections
+- Markdown writing with live preview
+- Status lifecycle: proposed, accepted, deprecated, superseded, rejected
+- Private drafts with one-click publishing
+- Pin important decisions to the sidebar
+- Link decisions that supersede earlier ones
+- Searchable command palette (Cmd/Ctrl + K)
+- Auto-generated changelog entries from decision events
+- Dark, native-feeling UI
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Next.js (App Router), React 19, TypeScript
+- Prisma ORM with SQLite (file database)
+- Auth.js (NextAuth v5) with email/password credentials
+- Tailwind CSS v4 and shadcn/ui
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Getting started
 
-## Learn More
+Prerequisites: Node.js 20+
 
-To learn more about Next.js, take a look at the following resources:
+1. Install dependencies: `npm install`
+2. Create your environment file: `cp .env.example .env`
+3. Set `AUTH_SECRET` in `.env` (generate with: `openssl rand -base64 32`)
+4. Create the database and apply migrations: `npx prisma migrate deploy`
+5. (Optional) Seed a demo user and sample decisions: `npx prisma db seed`
+6. Run the dev server: `npm run dev`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open http://localhost:3000 and sign in with the seeded demo account (demo@ratiolog.dev / password123), or create your own account.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment variables
 
-## Deploy on Vercel
+- `DATABASE_URL` — SQLite connection string (default: `file:./dev.db`)
+- `AUTH_SECRET` — Auth.js signing secret (required)
+- `AUTH_TRUST_HOST` — set to `true` for local development
+- `SEED_EMAIL` / `SEED_PASSWORD` — credentials for the seeded demo user
+- `ALLOW_SIGNUP` — set to `"false"` to make signups invite-only
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` — start the development server
+- `npm run build` — build the production bundle
+- `npm run start` — run the production build
+- `npm run lint` — run ESLint
+- `prisma generate` — regenerates the Prisma client (runs automatically on install)
+
+## Deployment notes
+
+The app uses a local SQLite file, so it needs a host with a persistent volume (for example a VPS or Docker). It is not compatible with serverless platforms like Vercel as-is; for those, migrate the datasource to PostgreSQL first.
