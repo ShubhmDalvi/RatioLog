@@ -37,6 +37,12 @@ export function GlobalSearch({ decisions }: { decisions: DecisionOption[] }) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  useEffect(() => {
+    const openPalette = () => setOpen(true);
+    window.addEventListener("ratiolog:open-search", openPalette);
+    return () => window.removeEventListener("ratiolog:open-search", openPalette);
+  }, []);
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Search or jump to…" />

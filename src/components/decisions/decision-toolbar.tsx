@@ -37,6 +37,11 @@ export function DecisionToolbar({
   const urlTag = searchParams.get("tag") ?? "";
 
   const [query, setQuery] = useState(urlQuery);
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => {
+    queueMicrotask(() => setIsMac(/Mac|iPhone|iPad/.test(navigator.platform)));
+  }, []);
 
   useEffect(() => {
     if (query === urlQuery) {
@@ -103,6 +108,21 @@ export function DecisionToolbar({
           aria-label="Search decisions"
           className="h-9 w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
         />
+        <button
+          type="button"
+          aria-label="Open command palette"
+          onClick={() => window.dispatchEvent(new Event("ratiolog:open-search"))}
+          className="hidden shrink-0 items-center gap-1 rounded border border-white/[0.10] bg-white/[0.05] px-2 py-1 font-mono text-[11px] leading-none text-zinc-400 transition-colors hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-zinc-200 sm:inline-flex"
+        >
+          {isMac ? (
+            <>
+              <span className="font-sans text-[13px] leading-none">⌘</span>
+              <span>K</span>
+            </>
+          ) : (
+            <>Ctrl K</>
+          )}
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
