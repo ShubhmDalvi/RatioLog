@@ -86,36 +86,43 @@ export async function countDecisions(
 export type DecisionStats = {
   total: number;
   byStatus: Record<DecisionStatus, number>;
-  latestDate: Date | null;
+  lastActivityAt: Date | null;
 };
 
 /** Aggregate counts for the living header + status filter chips. */
 export async function getDecisionStats(
   userId: string,
 ): Promise<DecisionStats> {
-  const rows = await prisma.decision.groupBy({
-    by: ["status"],
-    where: visibleWhere(userId),
-    _count: { _all: true },
-    _max: { date: true },
-  });
+  const [rows, activity] = await Promise.all([
+    prisma.decision.groupBy({
+      by: ["status"],
+      where: visibleWhere(userId),
+      _count: { _all: true },
+      _max: { updatedAt: true },
+    }),
+    prisma.changelogEntry.aggregate({
+      where: { createdById: userId },
+      _max: { createdAt: true },
+    }),
+  ]);
 
   const byStatus = Object.fromEntries(
     DECISION_STATUSES.map((status) => [status, 0]),
   ) as Record<DecisionStatus, number>;
 
   let total = 0;
-  let latestDate: Date | null = null;
+  let lastActivityAt: Date | null = activity._max.createdAt ?? null;
   for (const row of rows) {
     const count = row._count._all;
     byStatus[row.status] = count;
     total += count;
-    if (row._max.date && (!latestDate || row._max.date > latestDate)) {
-      latestDate = row._max.date;
+    const d = row._max.updatedAt;
+    if (d && (!lastActivityAt || d > lastActivityAt)) {
+      lastActivityAt = d;
     }
   }
 
-  return { total, byStatus, latestDate };
+  return { total, byStatus, lastActivityAt };
 }
 
 /**

@@ -89,8 +89,8 @@ export default async function DecisionsPage({
               {stats.byStatus.PROPOSED > 0
                 ? ` · ${stats.byStatus.PROPOSED} proposed`
                 : ""}
-              {stats.latestDate
-                ? ` · last entry ${formatDistanceToNow(stats.latestDate, {
+              {stats.lastActivityAt
+                ? ` · last activity ${formatDistanceToNow(stats.lastActivityAt, {
                     addSuffix: true,
                   })}`
                 : ""}
