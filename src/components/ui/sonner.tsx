@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "sonner";
 export function Toaster() {
   return (
     <Sonner
-      position="bottom-right"
+      position="bottom-center"
       theme="dark"
       toastOptions={{
         style: { width: "fit-content", maxWidth: "min(90vw, 420px)" },

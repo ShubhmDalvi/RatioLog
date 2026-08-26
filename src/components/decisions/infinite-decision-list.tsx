@@ -96,9 +96,9 @@ export function InfiniteDecisionList({
   return (
     <>
       <ul className="space-y-3">
-        {decisions.map((decision) => (
+        {decisions.map((decision, index) => (
           <li key={decision.id}>
-            <DecisionCard decision={decision} />
+            <DecisionCard decision={decision} index={index + 1} />
           </li>
         ))}
       </ul>

@@ -35,7 +35,6 @@ model Decision {
   title         String
   status        DecisionStatus @default(PROPOSED)
   date          DateTime       @default(now())
-  isPrivate     Boolean        @default(false)
   context       String         @default("")
   decision      String         @default("")
   consequences  String         @default("")
@@ -65,7 +64,7 @@ model PinnedDecision {
   userId     String
   user       User     @relation(fields: [userId], references: [id])
   decisionId String
-  decision   Decision @relation(fields: [decisionId], references: [id])
+  decision   Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
 
   @@unique([userId, decisionId])

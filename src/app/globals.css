@@ -149,6 +149,16 @@ body {
   }
 }
 
+/* Sonner's center toasts are position:absolute with NO x-anchors, so they sit
+   at their static (left) position inside the centered container and auto
+   margins compute to 0. Anchor both edges, then margin-inline auto centers
+   the fit-content toast on screen. */
+[data-sonner-toaster][data-x-position="center"] [data-sonner-toast] {
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+}
+
 /* ------------------------------------------------------------------ */
 /* Tailwind theme mapping                                              */
 /* ------------------------------------------------------------------ */
@@ -156,6 +166,7 @@ body {
 @theme inline {
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, monospace;
+  --font-serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
   --font-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 
   --color-desk: var(--desk);
@@ -249,5 +260,11 @@ body {
   }
   html {
     @apply font-sans;
+  }
+  /* Tailwind v4 preflight dropped cursor:pointer on buttons — restore the
+     hand affordance for every interactive control app-wide. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 }

@@ -39,16 +39,17 @@ async function canModifyEntry(
   return entry !== null && entry.createdById === userId;
 }
 
-/** Resolve the optional linked decision, validating that it exists. */
+/** Resolve the optional linked decision, validating ownership. */
 async function resolveDecisionId(
   raw: string,
+  userId: string,
 ): Promise<{ decisionId: string | null; error?: string }> {
   const id = raw.trim();
   if (!id) {
     return { decisionId: null };
   }
   const access = await getDecisionAccess(id);
-  if (!access) {
+  if (!access || access.createdById !== userId) {
     return { decisionId: null, error: "Choose a valid decision." };
   }
   return { decisionId: id };
@@ -67,7 +68,7 @@ export async function createChangelogEntryAction(
     return { ok: false, fieldErrors: flattenFieldErrors(parsed.error) };
   }
 
-  const linked = await resolveDecisionId(parsed.data.decisionId);
+  const linked = await resolveDecisionId(parsed.data.decisionId, session.user.id);
   if (linked.error) {
     return { ok: false, error: linked.error };
   }
@@ -113,7 +114,7 @@ export async function updateChangelogEntryAction(
     return { ok: false, fieldErrors: flattenFieldErrors(parsed.error) };
   }
 
-  const linked = await resolveDecisionId(parsed.data.decisionId);
+  const linked = await resolveDecisionId(parsed.data.decisionId, session.user.id);
   if (linked.error) {
     return { ok: false, error: linked.error };
   }

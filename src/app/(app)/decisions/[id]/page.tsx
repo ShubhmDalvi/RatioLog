@@ -1,5 +1,5 @@
-import { format } from "date-fns";
-import { ArrowLeft, GitFork, Pencil } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { ArrowLeft, ArrowRight, GitFork, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,9 +9,7 @@ import { ChangeStatusMenu } from "@/components/decisions/change-status-menu";
 import { CopyLinkButton } from "@/components/decisions/copy-link-button";
 import { DeleteDecisionButton } from "@/components/decisions/delete-decision-button";
 import { DecisionFormSheet } from "@/components/decisions/decision-form-sheet";
-import { DraftTag } from "@/components/decisions/draft-tag";
 import { PinButton } from "@/components/decisions/pin-button";
-import { PublishButton } from "@/components/decisions/publish-button";
 import { StatusBadge } from "@/components/decisions/status-badge";
 import { ToolbarButton } from "@/components/decisions/toolbar-button";
 import { Markdown } from "@/components/markdown";
@@ -33,19 +31,22 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const decision = await getDecisionById(id);
+  const session = await auth();
+  const decision = await getDecisionById(id, session?.user?.id);
   return { title: decision?.title ?? "Decision" };
 }
 
 function DocumentSection({
+  id,
   label,
   content,
 }: {
+  id?: string;
   label: string;
   content: string;
 }) {
   return (
-    <section>
+    <section id={id} className="scroll-mt-24">
       <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.05em] text-ink-muted">
         {label}
       </h2>
@@ -109,23 +110,34 @@ export default async function DecisionDetailPage({
       </Link>
 
       <div className="sticky top-14 z-10 -mx-5 flex items-center justify-between gap-2 border-b border-white/[0.08] bg-[#141417]/85 px-5 py-2.5 backdrop-blur-md max-sm:flex-wrap sm:-mx-8 sm:px-8 lg:top-0 lg:-mx-10 lg:px-10">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {isCreator ? (
             <ChangeStatusMenu id={decision.id} current={decision.status} />
           ) : (
             <StatusBadge status={decision.status} />
           )}
-          {decision.isPrivate ? <DraftTag /> : null}
+          <nav
+            aria-label="Jump to section"
+            className="hidden items-center gap-3 font-mono text-[11px] text-zinc-500 lg:flex"
+          >
+            <a href="#context" className="transition-colors hover:text-ink">
+              context
+            </a>
+            <a href="#decision" className="transition-colors hover:text-ink">
+              decision
+            </a>
+            <a href="#consequences" className="transition-colors hover:text-ink">
+              consequences
+            </a>
+          </nav>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1 whitespace-nowrap">
           {isCreator ? (
             <>
-              {decision.isPrivate ? (
-                <PublishButton id={decision.id} />
-              ) : null}
               <DecisionFormSheet
                 mode="edit"
                 openParam="edit"
+                userId={userId}
                 trigger={
                   <ToolbarButton aria-label="Edit" title="Edit">
                     <Pencil className="size-3.5" />
@@ -137,7 +149,6 @@ export default async function DecisionDetailPage({
                   title: decision.title,
                   status: decision.status,
                   date: decision.date,
-                  isPrivate: decision.isPrivate,
                   tags,
                   context: decision.context,
                   decision: decision.decision,
@@ -156,14 +167,43 @@ export default async function DecisionDetailPage({
         </div>
 
       <header className="border-b border-line pb-8">
+        {decision.status === "SUPERSEDED" && decision.supersededBy ? (
+          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3">
+            <GitFork className="size-4 shrink-0 text-amber-400" />
+            <p className="text-sm text-amber-200/90">
+              This decision has been superseded.
+            </p>
+            <Link
+              href={`/decisions/${decision.supersededBy.id}`}
+              className="group inline-flex items-center gap-1 text-sm font-medium text-amber-400 transition-colors hover:text-amber-300"
+            >
+              Superseded by {decision.supersededBy.title}
+              <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+        ) : null}
+        {decision.status === "DEPRECATED" ? (
+          <div className="mt-6 flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
+            <GitFork className="size-4 shrink-0 text-ink-faint" />
+            <p className="text-sm text-ink-muted">
+              This decision is deprecated — kept for the record, no longer in
+              force.
+            </p>
+          </div>
+        ) : null}
+
         <h1 className="mt-6 text-3xl font-semibold tracking-tight text-ink">
           {decision.title}
         </h1>
 
-        <div className="mt-3 flex items-center gap-2 text-sm text-ink-muted">
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
           <span>{format(decision.date, "MMMM d, yyyy")}</span>
           <span aria-hidden="true">·</span>
           <span>{author}</span>
+          <span aria-hidden="true">·</span>
+          <span className="text-ink-faint">
+            updated {formatDistanceToNow(decision.updatedAt, { addSuffix: true })}
+          </span>
         </div>
 
         {tags.length > 0 ? (
@@ -178,9 +218,13 @@ export default async function DecisionDetailPage({
       </header>
 
       <div className="mt-8 space-y-9">
-        <DocumentSection label="Context" content={decision.context} />
+        <DocumentSection
+          id="context"
+          label="Context"
+          content={decision.context}
+        />
 
-        <section>
+        <section id="decision" className="scroll-mt-24">
           <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.05em] text-ink-muted">
             Decision
           </h2>
@@ -193,7 +237,11 @@ export default async function DecisionDetailPage({
           )}
         </section>
 
-        <DocumentSection label="Consequences" content={decision.consequences} />
+        <DocumentSection
+          id="consequences"
+          label="Consequences"
+          content={decision.consequences}
+        />
 
         {hasRelated ? (
           <section>

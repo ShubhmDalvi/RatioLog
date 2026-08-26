@@ -1,3 +1,4 @@
+import { Bookmark } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 
@@ -5,12 +6,19 @@ import type { DecisionListItem } from "@/lib/decisions";
 import { markdownPreview } from "@/lib/decisions/preview";
 import { safeParseTags } from "@/lib/decisions/tags";
 import { TagChip } from "@/components/tag-chip";
-import { DraftTag } from "./draft-tag";
+
 import { StatusBadge } from "./status-badge";
 
-export function DecisionCard({ decision }: { decision: DecisionListItem }) {
+export function DecisionCard({
+  decision,
+  index,
+}: {
+  decision: DecisionListItem;
+  index?: number;
+}) {
   const tags = safeParseTags(decision.tags);
   const preview = markdownPreview(decision.context || decision.decision);
+  const isPinned = decision.pinnedBy.length > 0;
 
   return (
     <Link
@@ -19,12 +27,26 @@ export function DecisionCard({ decision }: { decision: DecisionListItem }) {
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
+          {isPinned ? (
+            <Bookmark
+              aria-label="Pinned"
+              className="size-3.5 shrink-0 text-brand"
+              fill="currentColor"
+              strokeWidth={1.75}
+            />
+          ) : null}
           <span className="truncate text-sm font-medium tracking-tight text-white">
             {decision.title}
           </span>
-          {decision.isPrivate ? <DraftTag /> : null}
         </div>
-        <StatusBadge status={decision.status} />
+        <div className="flex shrink-0 items-center gap-2">
+          {index !== undefined ? (
+            <span className="font-mono text-[10px] tracking-[0.06em] text-zinc-600">
+              {String(index).padStart(3, "0")}
+            </span>
+          ) : null}
+          <StatusBadge status={decision.status} />
+        </div>
       </div>
 
       {preview ? (

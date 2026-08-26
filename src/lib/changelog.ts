@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ChangelogEntry } from "@/generated/prisma/client";
+import { CHANGELOG_TYPES, type ChangelogType } from "@/lib/changelog/status";
 import type { DecisionStatus } from "@/lib/decisions/status";
 import { prisma } from "@/lib/prisma";
 
@@ -21,10 +22,12 @@ export type ChangelogEntryWithAuthor = ChangelogEntry & {
   decision: { id: string; title: string; status: DecisionStatus } | null;
 };
 
-export async function listChangelogEntries(): Promise<
-  ChangelogEntryWithAuthor[]
-> {
+export async function listChangelogEntries(
+  userId: string,
+  type?: ChangelogType,
+): Promise<ChangelogEntryWithAuthor[]> {
   return prisma.changelogEntry.findMany({
+    where: { createdById: userId, type },
     include: {
       createdBy: { select: { name: true, email: true } },
       decision: { select: { id: true, title: true, status: true } },
@@ -33,16 +36,41 @@ export async function listChangelogEntries(): Promise<
   });
 }
 
+/** Per-type counts for the filter chips (ignores the active type filter). */
+export async function countChangelogEntriesByType(
+  userId: string,
+): Promise<Record<ChangelogType, number>> {
+  const rows = await prisma.changelogEntry.groupBy({
+    by: ["type"],
+    where: { createdById: userId },
+    _count: { _all: true },
+  });
+
+  const byType = Object.fromEntries(
+    CHANGELOG_TYPES.map((type) => [type, 0]),
+  ) as Record<ChangelogType, number>;
+  for (const row of rows) {
+    byType[row.type] = row._count._all;
+  }
+  return byType;
+}
+
 export async function getChangelogEntry(
   id: string,
+  userId?: string,
 ): Promise<ChangelogEntryWithAuthor | null> {
-  return prisma.changelogEntry.findUnique({
+  const entry = await prisma.changelogEntry.findUnique({
     where: { id },
     include: {
       createdBy: { select: { name: true, email: true } },
       decision: { select: { id: true, title: true, status: true } },
     },
   });
+
+  if (!entry || entry.createdById !== userId) {
+    return null;
+  }
+  return entry;
 }
 
 /** Lightweight access info used to guard edits/deletes on changelog entries. */

@@ -18,7 +18,15 @@ import { cn } from "@/lib/utils";
 
 const DEBOUNCE_MS = 300;
 
-export function DecisionToolbar({ tags }: { tags: string[] }) {
+export type StatusCounts = { all: number } & Record<DecisionStatus, number>;
+
+export function DecisionToolbar({
+  tags,
+  statusCounts,
+}: {
+  tags: string[];
+  statusCounts?: StatusCounts;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -95,9 +103,6 @@ export function DecisionToolbar({ tags }: { tags: string[] }) {
           aria-label="Search decisions"
           className="h-9 w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
         />
-        <kbd className="hidden shrink-0 items-center gap-0.5 rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-ink-faint sm:inline-flex">
-          <span className="text-[11px] leading-none">⌘</span>K
-        </kbd>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -113,6 +118,11 @@ export function DecisionToolbar({ tags }: { tags: string[] }) {
             )}
           >
             All
+            {statusCounts ? (
+              <span className="ml-1.5 font-mono text-[10px] text-zinc-500">
+                {statusCounts.all}
+              </span>
+            ) : null}
           </button>
           {DECISION_STATUSES.map((status) => (
             <button
@@ -120,33 +130,43 @@ export function DecisionToolbar({ tags }: { tags: string[] }) {
               type="button"
               onClick={() => setStatus(status)}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
                 urlStatus === status
                   ? "border-white/[0.1] bg-white/[0.1] text-white"
                   : "border-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white",
+                statusCounts && statusCounts[status] === 0 && urlStatus !== status
+                  ? "opacity-50"
+                  : "",
               )}
             >
               {STATUS_LABELS[status]}
+              {statusCounts ? (
+                <span className="ml-1.5 font-mono text-[10px] text-zinc-500">
+                  {statusCounts[status]}
+                </span>
+              ) : null}
             </button>
           ))}
         </div>
 
-        <Select
-          value={urlTag || undefined}
-          onValueChange={(value) => setTag(value === "__none__" ? "" : value)}
-        >
-          <SelectTrigger className="h-7 w-auto gap-1.5 rounded-md border-none px-2.5 text-xs font-medium text-zinc-400 shadow-none hover:bg-white/[0.06] hover:text-white data-[placeholder]:text-zinc-400">
-            <SelectValue placeholder="All Tags" />
-          </SelectTrigger>
-          <SelectContent align="start">
-            <SelectItem value="__none__">All Tags</SelectItem>
-            {tags.map((tag) => (
-              <SelectItem key={tag} value={tag}>
-                {tag}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {tags.length > 0 ? (
+          <Select
+            value={urlTag || undefined}
+            onValueChange={(value) => setTag(value === "__none__" ? "" : value)}
+          >
+            <SelectTrigger className="h-7 w-auto gap-1.5 rounded-md border-none px-2.5 text-xs font-medium text-zinc-400 shadow-none hover:bg-white/[0.06] hover:text-white data-[placeholder]:text-zinc-400">
+              <SelectValue placeholder="All Tags" />
+            </SelectTrigger>
+            <SelectContent align="start">
+              <SelectItem value="__none__">All Tags</SelectItem>
+              {tags.map((tag) => (
+                <SelectItem key={tag} value={tag}>
+                  {tag}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
 
         {hasFilters ? (
           <button

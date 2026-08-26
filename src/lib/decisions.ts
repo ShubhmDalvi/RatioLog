@@ -5,10 +5,12 @@ import type { Prisma, Decision } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
 import { parseTags, safeParseTags } from "./decisions/tags";
+import { DECISION_STATUSES, type DecisionStatus } from "./decisions/status";
 import type { DecisionFormInput } from "./decisions/validation";
 
 export type DecisionListItem = Decision & {
   createdBy: { name: string | null; email: string };
+  pinnedBy: { userId: string }[];
 };
 
 export type DecisionOption = {
@@ -25,7 +27,6 @@ export type RelatedDecision = {
 };
 
 type RelatedWithAccess = RelatedDecision & {
-  isPrivate: boolean;
   createdById: string;
 };
 
@@ -36,24 +37,18 @@ export type DecisionDetail = Decision & {
 };
 
 /**
- * Only public decisions, or private drafts owned by the current user, are
- * visible. When `userId` is undefined (shouldn't happen in protected routes),
- * only public decisions are returned.
+ * Decisions belong to a single user space: only records created by the
+ * current user are ever visible. Fails closed when `userId` is undefined.
  */
 function visibleWhere(userId: string | undefined): Prisma.DecisionWhereInput {
-  return userId
-    ? { OR: [{ isPrivate: false }, { createdById: userId }] }
-    : { isPrivate: false };
+  return { createdById: userId ?? "__no_user__" };
 }
 
 function pickRelated(
   related: RelatedWithAccess | null,
   userId: string | undefined,
 ): RelatedDecision | null {
-  if (!related) {
-    return null;
-  }
-  if (related.isPrivate && related.createdById !== userId) {
+  if (!related || related.createdById !== userId) {
     return null;
   }
   return { id: related.id, title: related.title, status: related.status };
@@ -70,6 +65,7 @@ export async function listDecisions(
       createdBy: {
         select: { name: true, email: true },
       },
+      pinnedBy: { where: { userId: userId ?? "__no_user__" } },
     },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take: pagination?.take,
@@ -85,6 +81,64 @@ export async function countDecisions(
   return prisma.decision.count({
     where: { AND: [visibleWhere(userId), where] },
   });
+}
+
+export type DecisionStats = {
+  total: number;
+  byStatus: Record<DecisionStatus, number>;
+  latestDate: Date | null;
+};
+
+/** Aggregate counts for the living header + status filter chips. */
+export async function getDecisionStats(
+  userId: string,
+): Promise<DecisionStats> {
+  const rows = await prisma.decision.groupBy({
+    by: ["status"],
+    where: visibleWhere(userId),
+    _count: { _all: true },
+    _max: { date: true },
+  });
+
+  const byStatus = Object.fromEntries(
+    DECISION_STATUSES.map((status) => [status, 0]),
+  ) as Record<DecisionStatus, number>;
+
+  let total = 0;
+  let latestDate: Date | null = null;
+  for (const row of rows) {
+    const count = row._count._all;
+    byStatus[row.status] = count;
+    total += count;
+    if (row._max.date && (!latestDate || row._max.date > latestDate)) {
+      latestDate = row._max.date;
+    }
+  }
+
+  return { total, byStatus, latestDate };
+}
+
+/**
+ * Per-status counts for the filter chips. Respects `q`/`tag` so the numbers
+ * always describe the current result set, but ignores the status filter.
+ */
+export async function countDecisionsByStatus(
+  where: Prisma.DecisionWhereInput,
+  userId?: string,
+): Promise<Record<DecisionStatus, number>> {
+  const rows = await prisma.decision.groupBy({
+    by: ["status"],
+    where: { AND: [visibleWhere(userId), where] },
+    _count: { _all: true },
+  });
+
+  const byStatus = Object.fromEntries(
+    DECISION_STATUSES.map((status) => [status, 0]),
+  ) as Record<DecisionStatus, number>;
+  for (const row of rows) {
+    byStatus[row.status] = row._count._all;
+  }
+  return byStatus;
 }
 
 /** All visible decisions as lightweight options (Supersedes select, ⌘K). */
@@ -124,18 +178,15 @@ export async function getDecisionById(
         select: { name: true, email: true },
       },
       supersededBy: {
-        select: { id: true, title: true, status: true, isPrivate: true, createdById: true },
+        select: { id: true, title: true, status: true, createdById: true },
       },
       supersedes: {
-        select: { id: true, title: true, status: true, isPrivate: true, createdById: true },
+        select: { id: true, title: true, status: true, createdById: true },
       },
     },
   });
 
-  if (!decision) {
-    return null;
-  }
-  if (decision.isPrivate && decision.createdById !== userId) {
+  if (!decision || decision.createdById !== userId) {
     return null;
   }
 
@@ -146,13 +197,13 @@ export async function getDecisionById(
   };
 }
 
-/** Lightweight access info used to guard mutations on private drafts. */
+/** Lightweight access info used to guard mutations on decisions. */
 export async function getDecisionAccess(
   id: string,
-): Promise<{ isPrivate: boolean; createdById: string } | null> {
+): Promise<{ createdById: string; supersededById: string | null } | null> {
   return prisma.decision.findUnique({
     where: { id },
-    select: { isPrivate: true, createdById: true },
+    select: { createdById: true, supersededById: true },
   });
 }
 
@@ -160,7 +211,6 @@ export type DecisionEventInfo = {
   title: string;
   decision: string;
   status: Decision["status"];
-  isPrivate: boolean;
   supersedes: { id: string; title: string } | null;
 };
 
@@ -174,7 +224,6 @@ export async function getDecisionEventInfo(
       title: true,
       decision: true,
       status: true,
-      isPrivate: true,
       supersedes: { select: { id: true, title: true } },
     },
   });
@@ -203,7 +252,6 @@ export async function createDecision(
         title: input.title,
         status: input.status as Decision["status"],
         date: toDateValue(input.date),
-        isPrivate: input.isPrivate === "true",
         context: input.context,
         decision: input.decision,
         consequences: input.consequences,
@@ -236,7 +284,6 @@ export async function updateDecision(
         title: input.title,
         status: input.status as Decision["status"],
         date: toDateValue(input.date),
-        isPrivate: input.isPrivate === "true",
         context: input.context,
         decision: input.decision,
         consequences: input.consequences,
@@ -271,21 +318,11 @@ export async function updateDecisionStatus(
   });
 }
 
-export async function setDecisionPrivate(
-  id: string,
-  isPrivate: boolean,
-): Promise<Decision> {
-  return prisma.decision.update({
-    where: { id },
-    data: { isPrivate },
-  });
-}
-
 export async function deleteDecision(id: string): Promise<void> {
   await prisma.decision.delete({ where: { id } });
 }
 
-/** The current user's pinned decisions (respects visibility). */
+/** The current user's pinned decisions. */
 export async function listPinnedDecisions(
   userId: string,
 ): Promise<{ id: string; title: string }[]> {

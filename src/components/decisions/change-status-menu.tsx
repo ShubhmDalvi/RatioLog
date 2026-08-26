@@ -30,6 +30,12 @@ export function ChangeStatusMenu({
   const [isChanging, setIsChanging] = useState(false);
 
   async function changeTo(status: DecisionStatus) {
+    // Picking the already-active status is a no-op — don't hit the server
+    // and don't show a spurious error toast.
+    if (status === current) {
+      return;
+    }
+
     const formData = new FormData();
     formData.set("id", id);
     formData.set("status", status);

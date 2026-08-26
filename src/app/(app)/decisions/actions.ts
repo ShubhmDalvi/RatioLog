@@ -13,7 +13,6 @@ import {
   getDecisionAccess,
   getDecisionEventInfo,
   listDecisions,
-  setDecisionPrivate,
   toggleDecisionPin,
   updateDecision,
   updateDecisionStatus,
@@ -47,6 +46,41 @@ async function canModifyDecision(
   return access.createdById === userId;
 }
 
+/**
+ * Validate the supersedes target: it must exist, belong to the current user
+ * (the public combobox only offers their own, but the server re-checks), and
+ * not already be superseded by another decision. `currentId` is set when
+ * editing, so re-saving an existing link stays allowed.
+ */
+export async function validateSupersedes(
+  supersedesId: string,
+  userId: string,
+  currentId?: string,
+): Promise<string | null> {
+  if (!supersedesId.trim()) {
+    return null;
+  }
+  const target = await getDecisionAccess(supersedesId);
+  if (!target) {
+    return "Choose a valid decision.";
+  }
+  if (target.createdById !== userId) {
+    return "You can only supersede your own decisions.";
+  }
+  if (target.supersededById && target.supersededById !== currentId) {
+    return "That decision is already superseded by another one.";
+  }
+  if (currentId) {
+    // A decision that is itself superseded can't supersede another — this
+    // also blocks A⇄B mutual cycles (A superseded by B, then A supersedes B).
+    const own = await getDecisionAccess(currentId);
+    if (own?.supersededById) {
+      return "This decision is already superseded — it can't supersede another one.";
+    }
+  }
+  return null;
+}
+
 function statusEventType(status: DecisionStatus): ChangelogEntryType {
   switch (status) {
     case "ACCEPTED":
@@ -74,24 +108,33 @@ export async function createDecisionAction(
     return { ok: false, fieldErrors: flattenFieldErrors(parsed.error) };
   }
 
+  const supersedesError = await validateSupersedes(
+    parsed.data.supersedesId,
+    session.user.id,
+  );
+  if (supersedesError) {
+    return {
+      ok: false,
+      fieldErrors: { supersedesId: [supersedesError] },
+    };
+  }
+
   const decision = await createDecision(parsed.data, session.user.id);
 
-  // A decision created as public is immediately visible, so log it.
-  if (parsed.data.isPrivate !== "true") {
-    const info = await getDecisionEventInfo(decision.id);
-    if (info) {
-      const supersedeNote = info.supersedes
-        ? `\n\nSupersedes: ${info.supersedes.title}`
-        : "";
-      await logDecisionEvent({
-        decisionId: decision.id,
-        source: "DECISION_PUBLISHED",
-        type: "ADDED",
-        title: info.title,
-        description: `${info.decision}${supersedeNote}`.trim(),
-        createdById: session.user.id,
-      });
-    }
+  // Every decision is logged the moment it is recorded.
+  const info = await getDecisionEventInfo(decision.id);
+  if (info) {
+    const supersedeNote = info.supersedes
+      ? `\n\nSupersedes: ${info.supersedes.title}`
+      : "";
+    await logDecisionEvent({
+      decisionId: decision.id,
+      source: "DECISION_PUBLISHED",
+      type: "ADDED",
+      title: info.title,
+      description: `${info.decision}${supersedeNote}`.trim(),
+      createdById: session.user.id,
+    });
   }
 
   revalidatePath("/decisions");
@@ -122,11 +165,22 @@ export async function updateDecisionAction(
       error: "You don't have permission to edit this decision.",
     };
   }
-  const wasPrivate = access.isPrivate;
 
   const parsed = decisionFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { ok: false, fieldErrors: flattenFieldErrors(parsed.error) };
+  }
+
+  const supersedesError = await validateSupersedes(
+    parsed.data.supersedesId,
+    session.user.id,
+    id,
+  );
+  if (supersedesError) {
+    return {
+      ok: false,
+      fieldErrors: { supersedesId: [supersedesError] },
+    };
   }
 
   try {
@@ -135,35 +189,20 @@ export async function updateDecisionAction(
     return { ok: false, error: "This decision could not be found." };
   }
 
-  // Log visible changes only: private-draft churn stays off the changelog.
+  // Log the change.
   const info = await getDecisionEventInfo(id);
-  if (info && !info.isPrivate) {
-    if (wasPrivate) {
-      // Edited straight from a private draft to public = a publish.
-      const supersedeNote = info.supersedes
-        ? `\n\nSupersedes: ${info.supersedes.title}`
-        : "";
-      await logDecisionEvent({
-        decisionId: id,
-        source: "DECISION_PUBLISHED",
-        type: "ADDED",
-        title: info.title,
-        description: `${info.decision}${supersedeNote}`.trim(),
-        createdById: session.user.id,
-      });
-    } else {
-      const supersedeNote = info.supersedes
-        ? `\n\nSupersedes: ${info.supersedes.title}`
-        : "";
-      await logDecisionEvent({
-        decisionId: id,
-        source: "DECISION_EDITED",
-        type: "CHANGED",
-        title: `${info.title} updated`,
-        description: `${info.decision}${supersedeNote}`.trim(),
-        createdById: session.user.id,
-      });
-    }
+  if (info) {
+    const supersedeNote = info.supersedes
+      ? `\n\nSupersedes: ${info.supersedes.title}`
+      : "";
+    await logDecisionEvent({
+      decisionId: id,
+      source: "DECISION_EDITED",
+      type: "CHANGED",
+      title: `${info.title} updated`,
+      description: `${info.decision}${supersedeNote}`.trim(),
+      createdById: session.user.id,
+    });
   }
 
   revalidatePath("/decisions");
@@ -202,15 +241,13 @@ export async function changeStatusAction(
 
   await updateDecisionStatus(id, parsedStatus.data);
 
-  if (!before.isPrivate) {
-    await logDecisionEvent({
-      decisionId: id,
-      source: "DECISION_STATUS_CHANGED",
-      type: statusEventType(parsedStatus.data),
-      title: `${before.title} → ${STATUS_LABELS[parsedStatus.data]}`,
-      createdById: session.user.id,
-    });
-  }
+  await logDecisionEvent({
+    decisionId: id,
+    source: "DECISION_STATUS_CHANGED",
+    type: statusEventType(parsedStatus.data),
+    title: `${before.title} → ${STATUS_LABELS[parsedStatus.data]}`,
+    createdById: session.user.id,
+  });
 
   revalidatePath(`/decisions/${id}`);
   revalidatePath("/changelog");
@@ -239,7 +276,7 @@ export async function deleteDecisionAction(
   // Log before deleting: the entry references the decision, and deleting it
   // first would violate the FK. Created first, the link is SetNull'd by the
   // delete and the "removed" entry survives, unlinked.
-  if (before && !before.isPrivate) {
+  if (before) {
     await logDecisionEvent({
       decisionId: id,
       source: "DECISION_REMOVED",
@@ -270,7 +307,7 @@ export async function togglePinAction(
   }
 
   const access = await getDecisionAccess(id);
-  if (!access || (access.isPrivate && access.createdById !== session.user.id)) {
+  if (!access || access.createdById !== session.user.id) {
     return { ok: false, pinned: false };
   }
 
@@ -279,45 +316,6 @@ export async function togglePinAction(
   revalidatePath("/decisions");
   revalidatePath(`/decisions/${id}`);
   return { ok: true, pinned };
-}
-
-export async function publishDecisionAction(
-  formData: FormData,
-): Promise<{ ok: boolean }> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { ok: false };
-  }
-
-  const id = formData.get("id");
-  if (typeof id !== "string" || !id) {
-    return { ok: false };
-  }
-
-  if (!(await canModifyDecision(id, session.user.id))) {
-    return { ok: false };
-  }
-
-  const info = await getDecisionEventInfo(id);
-  if (!info || info.isPrivate === false) {
-    return { ok: false };
-  }
-
-  await setDecisionPrivate(id, false);
-
-  await logDecisionEvent({
-    decisionId: id,
-    source: "DECISION_PUBLISHED",
-    type: "ADDED",
-    title: info.title,
-    description: info.decision,
-    createdById: session.user.id,
-  });
-
-  revalidatePath("/decisions");
-  revalidatePath(`/decisions/${id}`);
-  revalidatePath("/changelog");
-  return { ok: true };
 }
 
 export type LoadMoreResult = {

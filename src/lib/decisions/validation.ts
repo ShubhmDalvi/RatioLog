@@ -6,7 +6,6 @@ export const decisionFormSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
   status: z.enum(DECISION_STATUSES),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a date"),
-  isPrivate: z.enum(["true", "false"]).default("false"),
   tags: z.string().trim().max(400).default(""),
   context: z.string().max(20000).default(""),
   decision: z.string().max(20000).default(""),

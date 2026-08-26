@@ -3,6 +3,7 @@
 import { AuthError } from "next-auth";
 
 import { signIn } from "@/auth";
+import { Prisma } from "@/generated/prisma/client";
 import { hashPassword } from "@/lib/auth/password";
 import { signupSchema } from "@/lib/auth/credentials";
 import { prisma } from "@/lib/prisma";
@@ -62,9 +63,25 @@ export async function signupAction(
   }
 
   const passwordHash = await hashPassword(password);
-  await prisma.user.create({
-    data: { email, name: name || null, passwordHash },
-  });
+  try {
+    await prisma.user.create({
+      data: { email, name: name || null, passwordHash },
+    });
+  } catch (error) {
+    // Two simultaneous signups with the same email can race past the
+    // existence check above — the unique constraint is the source of truth.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return {
+        fieldErrors: {
+          email: ["An account with this email already exists."],
+        },
+      };
+    }
+    throw error;
+  }
 
   try {
     await signIn("credentials", {

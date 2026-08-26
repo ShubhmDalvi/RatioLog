@@ -5,18 +5,18 @@
 
 # RatioLog
 
-A lightweight architecture decision record (ADR) and changelog for focused teams. Capture decisions with context and rationale, link superseded decisions, and keep a running record of what changed.
+Remember why you decided. A lightweight, personal decision log for people who build software: capture the context behind each architecture decision, link decisions that supersede older ones, and keep a running changelog of what changed — all in your own private space.
 
 ## Features
 
 - Architecture decision records with Context, Decision, and Consequences sections
 - Markdown writing with live preview
 - Status lifecycle: proposed, accepted, deprecated, superseded, rejected
-- Private drafts with one-click publishing
-- Pin important decisions to the sidebar
-- Link decisions that supersede earlier ones
-- Searchable command palette (Cmd/Ctrl + K)
 - Auto-generated changelog entries from decision events
+- Link decisions that supersede earlier ones
+- Pin important decisions to the sidebar
+- Searchable command palette (Cmd/Ctrl + K)
+- Per-user isolation — every account sees only its own data
 - Dark, native-feeling UI
 
 ## Tech stack
