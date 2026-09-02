@@ -107,6 +107,38 @@ body {
   color: var(--accent);
 }
 
+/* ------------------------------------------------------------------ */
+/* Minimal fine scrollbars                                             */
+/* Chromium/Edge/Safari: custom 6px bar with transparent track.        */
+/* Firefox: standard thin scrollbar with matching colors (scoped via   */
+/* -moz-appearance so Chrome keeps the custom webkit rendering).       */
+/* ------------------------------------------------------------------ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  }
+}
+
 /* App shell: deep-black base with a faint top glow */
 .app-shell {
   background: radial-gradient(1200px 480px at 50% -80px, rgba(45, 212, 191, 0.05), transparent 70%), var(--desk);
