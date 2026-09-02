@@ -29,12 +29,12 @@ export default async function AppLayout({
   ]);
 
   return (
-    <div className="app-shell flex min-h-screen flex-col text-ink lg:flex-row">
+    <div className="app-shell flex min-h-dvh flex-col text-ink lg:flex-row">
       <MobileNav user={user} pinned={pinned} />
       <Sidebar user={user} pinned={pinned} />
       <GlobalSearchLoader decisions={decisions} />
-      <main className="min-w-0 flex-1 px-3 py-3 sm:px-5 sm:py-5">
-        <div className="mx-auto min-h-[calc(100vh-2rem)] w-full max-w-[1180px] rounded-2xl border border-white/[0.08] bg-[#141417] px-5 py-8 shadow-2xl sm:px-8 lg:px-10 lg:py-10 max-sm:shadow-none">
+      <main className="flex min-w-0 flex-1 flex-col px-3 py-3 sm:px-5 sm:py-5">
+        <div className="mx-auto w-full max-w-[1180px] flex-1 rounded-2xl border border-white/[0.08] bg-[#141417] px-5 py-8 shadow-2xl sm:px-8 lg:px-10 lg:py-10 max-sm:shadow-none">
           {children}
         </div>
       </main>
