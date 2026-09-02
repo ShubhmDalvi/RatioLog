@@ -40,7 +40,7 @@ const components: Components = {
     </blockquote>
   ),
   pre: ({ children }) => (
-    <pre className="my-4 overflow-x-auto rounded-lg bg-[#262625] p-4 text-[13px] leading-relaxed text-[#e9e8e6] first:mt-0 last:mb-0">
+    <pre className="my-4 overflow-x-auto rounded-lg bg-[#262625] p-4 text-[13px] leading-relaxed text-[#e9e8e6] [overflow-wrap:normal] first:mt-0 last:mb-0">
       {children}
     </pre>
   ),
@@ -72,7 +72,7 @@ export function Markdown({ content }: { content: string }) {
   }
 
   return (
-    <div className="text-[15px] leading-relaxed text-ink">
+    <div className="[overflow-wrap:anywhere] text-[15px] leading-relaxed text-ink">
       <ReactMarkdown components={components}>{content}</ReactMarkdown>
     </div>
   );

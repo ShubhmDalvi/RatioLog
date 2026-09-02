@@ -192,7 +192,7 @@ export default async function DecisionDetailPage({
           </div>
         ) : null}
 
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-ink">
+        <h1 className="mt-6 break-words text-3xl font-semibold tracking-tight text-ink">
           {decision.title}
         </h1>
 
