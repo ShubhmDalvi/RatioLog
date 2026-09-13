@@ -77,18 +77,18 @@ const seedDecisions: SeedDecision[] = [
     context: `Developers should be able to clone the repo and run the app with zero external services.`,
     decision: `Run local development against a **SQLite** file database so setup is a single command.`,
     consequences: `- Easier: zero-config local setup.
-- Harder: subtle differences from production PostgreSQL.`,
+- Harder: subtle differences from production Turso.`,
     supersedes: undefined,
   },
   {
-    title: "Use PostgreSQL in production",
+    title: "Use Turso in production",
     status: "ACCEPTED",
     date: "2026-03-01",
     tags: ["database", "infrastructure"],
     pinned: true,
     context: `SQLite cannot serve concurrent writes at production scale, and we want full-text search later.`,
-    decision: `Deploy on **PostgreSQL** hosted by Neon. The Prisma schema stays provider-agnostic so local SQLite and production Postgres differ only by connection string.`,
-    consequences: `- Easier: hosted backups, row-level security, and tsvector search later.
+    decision: `Deploy on **Turso** (distributed libSQL). Same SQLite dialect locally and in production, so the only difference is the connection string.`,
+    consequences: `- Easier: hosted backups, edge replicas, and the same SQL dialect everywhere.
 - Harder: a real database dependency in the deploy pipeline.`,
     supersedes: "Use SQLite for local development",
   },

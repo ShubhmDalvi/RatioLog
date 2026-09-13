@@ -220,6 +220,15 @@ export function DecisionForm({
   const supersedeOptions = decisions.filter((item) => item.id !== decision?.id);
   const errors = result && !result.ok ? result : undefined;
 
+  // Non-default values tucked inside the collapsed Details drawer — shown as
+  // a small badge so they aren't forgotten down there.
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const detailsBadgeCount =
+    (status !== "PROPOSED" ? 1 : 0) +
+    (date !== todayStr ? 1 : 0) +
+    (tags.length > 0 ? 1 : 0) +
+    (supersedesId !== NO_SUPERSEDES ? 1 : 0);
+
   // --- Draft safety (create mode): restore, autosave, dirty tracking -------
   // Baseline is captured once at first render; `isDirty` is a plain compare
   // against it. No effects needed to seed it.
@@ -476,6 +485,16 @@ export function DecisionForm({
       }
 
       setResult(res);
+      if (
+        !res.ok &&
+        (res.fieldErrors?.date ||
+          res.fieldErrors?.tags ||
+          res.fieldErrors?.supersedesId)
+      ) {
+        // Those fields live inside Details — open it so the errors are
+        // visible instead of hidden in the collapsed drawer.
+        setDetailsOpen(true);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -499,6 +518,13 @@ export function DecisionForm({
       {/* Always present so submit works with the Details drawer collapsed. */}
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="tags" value={tags.join(", ")} />
+      {/* Always present so submit works while a section is in Preview mode
+          (preview unmounts the textarea, which would otherwise drop the
+          value from FormData and silently blank the section). When the
+          textarea is mounted it comes later in the form, so its value wins. */}
+      <input type="hidden" name="context" value={context} />
+      <input type="hidden" name="decision" value={decisionBody} />
+      <input type="hidden" name="consequences" value={consequences} />
       <input
         type="hidden"
         name="supersedesId"
@@ -542,7 +568,7 @@ export function DecisionForm({
             ref={titleRef}
             id="title"
             name="title"
-            placeholder="e.g. Adopt PostgreSQL for the decision store"
+            placeholder="e.g. Adopt Turso for the decision store"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             className={cn(
@@ -608,6 +634,14 @@ export function DecisionForm({
               <span className="hidden font-normal text-ink-faint sm:inline">
                 — status, date, tags, supersedes
               </span>
+              {!detailsOpen && detailsBadgeCount > 0 ? (
+                <span
+                  aria-label={`${detailsBadgeCount} detail${detailsBadgeCount === 1 ? "" : "s"} set`}
+                  className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand/20 px-1.5 py-0.5 font-mono text-[10px] leading-none text-brand"
+                >
+                  {detailsBadgeCount}
+                </span>
+              ) : null}
             </span>
             <ChevronDown
               className={cn(
@@ -667,6 +701,7 @@ export function DecisionForm({
                   onChange={setTags}
                   availableTags={availableTags}
                 />
+                <FieldError error={errors?.fieldErrors?.tags} />
               </div>
 
               <div className="space-y-1.5">

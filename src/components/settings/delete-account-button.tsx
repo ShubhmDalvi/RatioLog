@@ -29,11 +29,11 @@ export function DeleteAccountButton() {
         router.replace("/login");
         return;
       }
-      toast.error("Could Not Delete Account");
+      toast.error("Could Not Delete Account", { duration: 3500 });
       setIsDeleting(false);
     } catch {
       setIsDeleting(false);
-      toast.error("Could Not Delete Account");
+      toast.error("Could Not Delete Account", { duration: 3500 });
     }
   }
 

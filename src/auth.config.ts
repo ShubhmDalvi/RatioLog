@@ -1,6 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 
-const protectedPrefixes = ["/decisions", "/changelog"];
+const protectedPrefixes = ["/decisions", "/changelog", "/settings"];
 
 /**
  * Shared Auth.js configuration used by both the app (`auth.ts`) and the

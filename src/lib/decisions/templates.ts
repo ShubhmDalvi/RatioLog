@@ -20,7 +20,7 @@ export const DECISION_TEMPLATES: DecisionTemplate[] = [
   {
     id: "database",
     label: "Choose a database",
-    hint: "Postgres, SQLite, or managed",
+    hint: "Turso, SQLite, or managed",
     title: "Choose the production database",
     tags: ["database", "infrastructure"],
     context: `We need a primary database for production.

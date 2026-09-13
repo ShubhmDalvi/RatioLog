@@ -139,7 +139,7 @@ export function DecisionToolbar({
           >
             All
             {statusCounts ? (
-              <span className="ml-1.5 font-mono text-[10px] text-zinc-500">
+              <span className="ml-2 font-mono text-[10px] tabular-nums text-zinc-500">
                 {statusCounts.all}
               </span>
             ) : null}
@@ -161,7 +161,7 @@ export function DecisionToolbar({
             >
               {STATUS_LABELS[status]}
               {statusCounts ? (
-                <span className="ml-1.5 font-mono text-[10px] text-zinc-500">
+                <span className="ml-2 font-mono text-[10px] tabular-nums text-zinc-500">
                   {statusCounts[status]}
                 </span>
               ) : null}

@@ -47,7 +47,7 @@ export function ChangeStatusMenu({
     if (res.ok && res.status) {
       toast.success(`Status Changed to ${STATUS_LABELS[res.status as DecisionStatus]}`);
     } else {
-      toast.error("Could Not Change Status");
+      toast.error("Could Not Change Status", { duration: 3500 });
     }
     router.refresh();
   }

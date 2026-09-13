@@ -27,7 +27,7 @@ export function DeleteChangelogEntryButton({ id }: { id: string }) {
         return;
       }
 
-      toast.error("Could Not Delete Changelog Entry");
+      toast.error("Could Not Delete Changelog Entry", { duration: 3500 });
     } finally {
       setIsDeleting(false);
     }

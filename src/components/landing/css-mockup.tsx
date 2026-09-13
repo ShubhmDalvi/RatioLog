@@ -104,7 +104,7 @@ export function CssMockup() {
             </div>
             <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px] text-zinc-400">
               <Bookmark className="size-3" strokeWidth={1.75} />
-              <span className="truncate">Postgres in prod</span>
+              <span className="truncate">Turso in prod</span>
             </div>
             <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px] text-zinc-400">
               <Bookmark className="size-3" strokeWidth={1.75} />
@@ -146,8 +146,8 @@ export function CssMockup() {
 
             <div className="space-y-2.5">
               <MockCard
-                title="Adopt Postgres for production workloads"
-                preview="Concurrent writes outgrew the file database. Postgres keeps the Prisma schema unchanged and gives us hosted backups from day one."
+                title="Adopt Turso for production workloads"
+                preview="Concurrent writes outgrew the file database. Turso keeps the SQLite dialect we develop against and gives us hosted backups from day one."
                 tag="database"
                 date="Mar 1, 2026"
                 status="accepted"

@@ -16,7 +16,7 @@ export function CopyLinkButton() {
       toast.success("Link Copied");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Could Not Copy Link");
+      toast.error("Could Not Copy Link", { duration: 3500 });
     }
   }
 

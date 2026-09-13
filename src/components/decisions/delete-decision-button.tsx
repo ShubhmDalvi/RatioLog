@@ -37,7 +37,7 @@ export function DeleteDecisionButton({ id }: { id: string }) {
         return;
       }
 
-      toast.error("Could Not Delete Decision");
+      toast.error("Could Not Delete Decision", { duration: 3500 });
     } finally {
       setIsDeleting(false);
     }
