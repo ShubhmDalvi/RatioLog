@@ -181,14 +181,41 @@ body {
   }
 }
 
-/* Sonner's center toasts are position:absolute with NO x-anchors, so they sit
-   at their static (left) position inside the centered container and auto
-   margins compute to 0. Anchor both edges, then margin-inline auto centers
-   the fit-content toast on screen. */
-[data-sonner-toaster][data-x-position="center"] [data-sonner-toast] {
-  left: 0;
-  right: 0;
-  margin-inline: auto;
+/* Sonner bottom-center pill: toasts are position:absolute with NO x-anchors, so
+   they sit at their static (left) position and auto margins compute to 0.
+   Anchor both edges, then margin-inline auto centers the fit-content pill. */
+@media (min-width: 601px) {
+  [data-sonner-toaster][data-x-position="center"] [data-sonner-toast] {
+    left: 0;
+    right: 0;
+    margin-inline: auto;
+    width: fit-content;
+    max-width: min(90vw, 420px);
+  }
+}
+
+/* Mobile: Sonner's default is width:100% PLUS left/right offsets, which
+   overconstrains the fixed toaster (right gets ignored) so it spans
+   16..406px on a 390px viewport and the pill inherits a ~16px right shift.
+   Let the offsets determine the width instead (width:auto), then the
+   fit-content pill centers inside a correctly anchored toaster. */
+@media (max-width: 600px) {
+  [data-sonner-toaster][data-x-position="center"] {
+    left: var(--mobile-offset-left, 16px) !important;
+    right: var(--mobile-offset-right, 16px) !important;
+    width: auto !important;
+    transform: none !important;
+  }
+  [data-sonner-toaster][data-x-position="center"] [data-sonner-toast] {
+    left: 0;
+    right: 0;
+    margin-inline: auto;
+    width: fit-content !important;
+    max-width: min(calc(100vw - 32px), 420px);
+  }
+  [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: calc(var(--mobile-offset-bottom, 16px) + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ------------------------------------------------------------------ */
